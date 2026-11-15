@@ -1,7 +1,9 @@
-# xiaomi-airp-mb6
+# Xiaomi Mijia Smart Air Purifier MAX: local control
 
 Local control of the Xiaomi Mijia Smart Air Purifier MAX (`xiaomi.airp.mb6`) over your home network,
 without Mi Home or the Xiaomi cloud.
+
+Tested on one unit with Wi-Fi firmware 1.0.3 and MCU firmware 0019.
 
 I couldn't find anything about this model's local protocol online, so I mapped it myself.
 The repo has:
@@ -38,6 +40,19 @@ venv/bin/python boost.py --token <TOKEN>
 Without `--ip` the scripts look for the device with a UDP broadcast. If that doesn't work on your network,
 add `--subnet 192.168.1` or give the purifier a fixed IP in your router. You can also set `MIIO_TOKEN` and `MIIO_IP`.
 
+This is what `watch.py` printed when I switched to sleep mode and then to favorite level 10
+(`2.3` is the mode, `13.3` the target RPM, `13.4` the measured RPM):
+
+```
+18:03:37 2.3: 0 -> 3
+18:03:37 13.3: 611 -> 300
+18:03:37 13.4: 605 -> 475
+18:03:41 2.3: 3 -> 5
+18:03:41 13.3: 300 -> 1620
+18:03:41 13.4: 475 -> 950
+18:03:45 13.4: 950 -> 1320
+```
+
 From Python:
 
 ```python
@@ -62,10 +77,31 @@ Don't share your token. Anyone on your network who has it can control the purifi
 `13.9` sets the motor RPM directly. The motor follows it even in Auto mode, until you actually change the mode.
 The app tops out at 1620 rpm (favorite level 10), but the firmware doesn't stop there.
 
-Service 14 is a self-test that the global spec doesn't list. The device answers it and it matches the
-Chinese version's spec. I haven't run it.
+### Self-test from the Chinese version
+
+The Chinese version (`xiaomi.airp.mp6`) has a self-test service (service 14) in its spec. It can test the motor,
+the formaldehyde, particle and temperature sensors, the lid sensor and each button. The global spec for this
+model doesn't mention it at all, but the device still answers on service 14 and the properties match the
+Chinese spec exactly. So the feature seems to be in the firmware, just hidden. I haven't started a test yet
+because I don't know what the device does during it.
+
+### Filter counter and filter tag
+
+Service 11 is meant for a filter tag (serial, factory, type, date, batch). On my unit every field is zero,
+and it stayed zero after I took the filter out and put it back. So at least here the purifier doesn't seem
+to read anything from the filter, and filter life looks like a plain hour counter.
+
+There are also two write-only properties, `10.1` (filter hours used) and `10.2` (filter percent used).
+In theory they would let you set the counter yourself. I haven't tried writing them.
 
 Details, measurements and open questions are in `FIELDS.md`.
+
+## Home Assistant
+
+This repo is not a Home Assistant integration. If you use
+[hass-xiaomi-miot](https://github.com/al-one/hass-xiaomi-miot), the standard properties come from the official
+spec and should work. The hidden ones like `13.9` are not in the spec, so they won't show up on their own.
+You can use the addresses in `FIELDS.md` to call them yourself.
 
 ## Be careful
 
