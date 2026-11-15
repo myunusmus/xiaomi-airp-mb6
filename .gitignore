@@ -1,0 +1,15 @@
+# secrets
+tokens.json
+*.token
+.env
+
+# local data
+*.log
+ip.txt
+
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
